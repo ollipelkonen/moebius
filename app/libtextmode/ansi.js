@@ -410,15 +410,14 @@ class Ansi extends Textmode {
 
     create_new_frame() {
         this.finalize_frame();
+        this._screens.push( new Screen(this.columns) );
         this._current++;
-        //this._screens.push( new Screen(this.columns) );
-        //this._screens[this._current].name = "SCREEN_" + this._current;
+        this._screens[this._current].name = "SCREEN_" + this._current;
     }
 
     constructor(bytes) {
         super(bytes);
         const tokens = tokenize_file({bytes: this.bytes, filesize: this.filesize});
-        console.log("constructor", tokens);
         //let screen = new Screen(this.columns);
         for (const token of tokens) {
             if (token.type == token_type.LITERAL) {
@@ -441,8 +440,6 @@ class Ansi extends Textmode {
                     case sequence_type.RIGHT: this.screen.right(sequence.values[0]); break;
                     case sequence_type.LEFT: this.screen.left(sequence.values[0]); break;
                     case sequence_type.MOVE:
-                      //TODO: check if this is going to do empty frame without any content before this
-                      console.log("Creating new frame", sequence.type);
                     this.create_new_frame();
                     this.screen.move(sequence.values[1], sequence.values[0]); break;
                     case sequence.ERASE_DISPLAY:
@@ -508,9 +505,25 @@ class Ansi extends Textmode {
         while ( k >= 0 )
         {
           this._datas.splice(k, 1);
+          this._screens.splice(k, 1);
           this._current--;
           k = this._datas.findIndex( a => a == undefined || a.length == 0 );
         }
+
+        // for some reason columns and/or rows are undefined. assume all screen have same size
+        const colScreen = this._screens.find( (a) => {
+          return a.columns !== undefined;
+        });
+        const heightScreen = this._screens.find( (a) => {
+          return a.rows !== undefined && a.rows !== NaN;
+        });
+        const columns = colScreen ? colScreen.columns : 80;
+        const rows = heightScreen ? heightScreen.rows : 25;
+        this._screens.forEach( (a) => {
+          a.rows = rows;
+          a.columns = columns;
+         } );
+
     }
 }
 
@@ -535,9 +548,7 @@ function encode_as_ansi(textmodedoc, save_without_sauce, {utf8 = false} = {}) {
     let current_blink = false;
 
     //TODO: this "doc" is TextModeDoc
-    console.log( "doc? ", textmodedoc.doc, "doc", textmodedoc);
     const doc = textmodedoc.doc ? textmodedoc.doc : textmodedoc;
-    console.log(" framescoutn", doc.frame_count );
     // loop through all doc._datas and add ESC[H before each frame
     doc._current = 0;
     const frame_count = ( doc.frame_count == undefined ) ? 1 : doc.frame_count;
