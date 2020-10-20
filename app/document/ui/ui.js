@@ -54,7 +54,9 @@ on("toggle_reference_image", (event, visible) => toggle_reference_image(visible)
 on("clear_reference_image", (event) => clear_reference_image());
 
 function set_text(name, text) {
-    $(name).textContent = text;
+    const item = $(name);
+    if ( item )
+        item.textContent = text;
 }
 
 
@@ -158,6 +160,20 @@ class StatusBar {
         this.status_bar_info(doc.columns, doc.rows);
     }
 
+    //TODO: wtf electron? sometimes # works, sometimes doesn't?
+    set_frame_info( current, total )
+    {
+      let md = $("#current_frame");
+      if ( md === null )
+        md = $("current_frame");
+      md.textContent =  (current+1);
+
+      md = $("#frame_count");
+      if ( md === null )
+        md = $("frame_count")
+      md.textContent = total;
+    }
+
     set_cursor_position(x, y) {
         set_text("cursor_x", `${x + 1}`);
         set_text("cursor_y", `${y + 1}`);
@@ -173,6 +189,9 @@ class StatusBar {
 
     constructor() {
         doc.on("render", () => this.use_canvas_size_for_status_bar());
+        doc.on("update_frame_statusbar",(event) => {
+          this.set_frame_info( event.current, event.total );
+        });
     }
 }
 

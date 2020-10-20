@@ -2,6 +2,8 @@ const {ega, c64} = require("./palette");
 const {Textmode, add_sauce_for_ans} = require("./textmode");
 const {cp437_to_unicode_bytes} = require("./encodings");
 
+//@NOTE: MOVE_ALT and MOVE are the same, moves cursor to left upper corner
+
 const sequence_type = {UNKNOWN: 0, UP: "A", DOWN: "B", RIGHT: "C", LEFT: "D", MOVE: "H", MOVE_ALT: "f", ERASE_DISPLAY: "J", ERASE_LINE: "K", SGR: "m", SAVE_POS: "s", TRUE_COLOR: "t", RESTORE_POS: "u"};
 const token_type = {ESCAPE_SEQUENCE: 0, LITERAL: 1};
 const ascii = {NEW_LINE: 10, CARRIAGE_RETURN: 13, ESCAPE: 27, SPACE: 32, ZERO: 48, NINE: 57, COLON: 58, SEMI_COLON: 59, AT_SYMBOL: 64, OPEN_SQUARE_BRACKET: 91, TILDA: 126};
@@ -330,99 +332,196 @@ const sgr_types = {RESET_ATTRIBUTES: 0, BOLD_ON: 1, BLINK_ON: 5, INVERSE_ON: 7, 
 const true_color_type = {BACKGROUND: 0, FOREGROUND: 1};
 
 class Ansi extends Textmode {
-    constructor(bytes) {
-        super(bytes);
-        const tokens = tokenize_file({bytes: this.bytes, filesize: this.filesize});
-        if (!this.columns) this.columns = 80;
-        let screen = new Screen(this.columns);
-        for (const token of tokens) {
-            if (token.type == token_type.LITERAL) {
-                const code = token.code;
-                switch (code) {
-                    case ascii.NEW_LINE:
-                    screen.new_line();
-                    break;
-                    case ascii.CARRIAGE_RETURN:
-                    break;
-                    default:
-                    screen.literal(code);
-                    break;
-                }
-            } else if (token.type == token_type.ESCAPE_SEQUENCE) {
-                const sequence = token.sequence;
-                switch (sequence.type) {
-                    case sequence_type.UP: screen.up(sequence.values[0]); break;
-                    case sequence_type.DOWN: screen.down(sequence.values[0]); break;
-                    case sequence_type.RIGHT: screen.right(sequence.values[0]); break;
-                    case sequence_type.LEFT: screen.left(sequence.values[0]); break;
-                    case sequence_type.MOVE: screen.move(sequence.values[1], sequence.values[0]); break;
-                    case sequence.ERASE_DISPLAY:
-                    switch (sequence.values[0]) {
-                        // case erase_display_types.UNTIL_END_OF_SCREEN: screen.clear_until_end_of_screen(); break;
-                        // case erase_display_types.FROM_START_OF_SCREEN: screen.clear_from_start_of_screen(); break;
-                        // case erase_display_types.CLEAR_SCREEN: screen.clear(); break;
-                    }
-                    break;
-                    case sequence_type.ERASE_LINE:
-                    switch (sequence.values[0]) {
-                        // case erase_line_types.UNTIL_END_OF_LINE: screen.clear_until_end_of_line(); break;
-                        // case erase_line_types.FROM_START_OF_LINE: screen.clear_from_start_of_line(); break;
-                        // case erase_line_types.CLEAR_LINE: screen.clear_line(); break;
-                    }
-                    break;
-                    case sequence_type.SGR:
-                    for (const value of sequence.values) {
-                        if (value >= sgr_types.CHANGE_FG_START && value <= sgr_types.CHANGE_FG_END) {
-                            screen.fg = value - sgr_types.CHANGE_FG_START;
-                            screen.fg_rgb = undefined;
-                        } else if (value >= sgr_types.CHANGE_BG_START && value <= sgr_types.CHANGE_BG_END) {
-                            screen.bg = value - sgr_types.CHANGE_BG_START;
-                            screen.bg_rgb = undefined;
-                        } else {
-                            switch (value) {
-                                case sgr_types.RESET_ATTRIBUTES: screen.reset_attributes(); break;
-                                case sgr_types.BOLD_ON: screen.bold = true; screen.fg_rgb = undefined; break;
-                                case sgr_types.BLINK_ON: screen.blink = true; break;
-                                case sgr_types.INVERSE_ON: screen.inverse = true; break;
-                                case sgr_types.BOLD_OFF:
-                                case sgr_types.BLINK_OFF_ALT:
-                                screen.bold = false;
-                                break;
-                                case sgr_types.BLINK_OFF: screen.blink = false; break;
-                                case sgr_types.INVERSE_OFF: screen.inverse = false; break;
-                            }
-                        }
-                    }
-                    break;
-                    case sequence_type.SAVE_POS: screen.save_pos(); break;
-                    case sequence_type.TRUE_COLOR:
-                    if (sequence.values.length >= 4) {
-                        switch (sequence.values[0]) {
-                            case true_color_type.BACKGROUND: screen.bg_rgb = {r: sequence.values[1], g: sequence.values[2], b: sequence.values[3]}; break;
-                            case true_color_type.FOREGROUND: screen.fg_rgb = {r: sequence.values[1], g: sequence.values[2], b: sequence.values[3]}; break;
-                        }
-                    }
-                    break;
-                    case sequence_type.RESTORE_POS: screen.restore_pos(); break;
-                    case sequence_type.UNKNOWN: break;
-                }
-            }
+
+    //TODO: is this really required? maybe it'd be better to resize all _datas when resizing etc
+    get screen() {
+        if ( this._screens == undefined )
+        {
+            if (!this.columns) this.columns = 80;
+            this._current = 0;
+            const scr = new Screen(this.columns);
+            scr.name = "SCREEN_" + this._current;
+            this._screens = [ scr ];
         }
-        if (!this.rows) {
-            this.rows = screen.rows;
-        } else if (this.rows > screen.rows) {
-            screen.fill(this.rows - screen.rows);
-            screen.rows = this.rows;
-        } else if (this.rows < screen.rows) {
-            screen.rows = this.rows;
+        return this._screens[this._current];
+    }
+
+    get data() {
+        return this._datas[this._current];
+    }
+
+    set data(value) {
+        if ( this._datas == undefined )
+            this._datas = [];
+        this._datas[this._current] = value;
+    }
+
+    previous_frame() {
+      this._current = (this._screens.length + this._current - 1) % this._screens.length;
+    }
+
+    next_frame() {
+        this._current = (this._current+1) % this._screens.length;
+    }
+
+    get current_frame() {
+        return this._current;
+    }
+
+    set current_frame(value) {
+        this._current = value;
+    }
+
+    get frame_count() {
+        return this._datas.length;
+    }
+
+    get rows() {
+        return this.screen.rows;
+    }
+
+    set rows(value) {
+        //TODO: some asshole puts undefined value here. do not accept it.
+        if ( value !== undefined )
+            this.screen.rows = value;
+    }
+
+    finalize_frame() {
+        // this doesn't make much sense, as earlier it was done only once, as a last step in constructor
+        if (!this._rows) {
+            if ( this.screen.rows == undefined )
+                this.screen.rows = 25;
+            this._rows = this.screen.rows;
+        } else if (this._rows > this.screen.rows) {
+            this.screen.fill(this._rows - this.screen.rows);
+            this.screen.rows = this._rows;
+        } else if (this._rows < this.screen.rows) {
+            this.screen.rows = this._rows;
         }
         if (this.font_name == "C64 PETSCII unshifted" || this.font_name == "C64 PETSCII shifted") {
             this.palette = c64;
         } else {
             this.palette = ega;
         }
-        this.custom_colors = screen.unique_custom_colors();
-        this.data = screen.trim_data();
+        this.custom_colors = this.screen.unique_custom_colors();
+        this.data = this.screen.trim_data();
+    }
+
+    create_new_frame() {
+        this.finalize_frame();
+        this._screens.push( new Screen(this.columns) );
+        this._current++;
+        this._screens[this._current].name = "SCREEN_" + this._current;
+    }
+
+    constructor(bytes) {
+        super(bytes);
+        const tokens = tokenize_file({bytes: this.bytes, filesize: this.filesize});
+        //let screen = new Screen(this.columns);
+        for (const token of tokens) {
+            if (token.type == token_type.LITERAL) {
+                const code = token.code;
+                switch (code) {
+                    case ascii.NEW_LINE:
+                    this.screen.new_line();
+                    break;
+                    case ascii.CARRIAGE_RETURN:
+                    break;
+                    default:
+                    this.screen.literal(code);
+                    break;
+                }
+            } else if (token.type == token_type.ESCAPE_SEQUENCE) {
+                const sequence = token.sequence;
+                switch (sequence.type) {
+                    case sequence_type.UP: this.screen.up(sequence.values[0]); break;
+                    case sequence_type.DOWN: this.screen.down(sequence.values[0]); break;
+                    case sequence_type.RIGHT: this.screen.right(sequence.values[0]); break;
+                    case sequence_type.LEFT: this.screen.left(sequence.values[0]); break;
+                    case sequence_type.MOVE:
+                    this.create_new_frame();
+                    this.screen.move(sequence.values[1], sequence.values[0]); break;
+                    case sequence.ERASE_DISPLAY:
+                    switch (sequence.values[0]) {
+                        // case erase_display_types.UNTIL_END_OF_SCREEN: this.screen.clear_until_end_of_screen(); break;
+                        // case erase_display_types.FROM_START_OF_SCREEN: this.screen.clear_from_start_of_screen(); break;
+                        // case erase_display_types.CLEAR_SCREEN: this.screen.clear(); break;
+                    }
+                    break;
+                    case sequence_type.ERASE_LINE:
+                    switch (sequence.values[0]) {
+                        // case erase_line_types.UNTIL_END_OF_LINE: this.screen.clear_until_end_of_line(); break;
+                        // case erase_line_types.FROM_START_OF_LINE: this.screen.clear_from_start_of_line(); break;
+                        // case erase_line_types.CLEAR_LINE: this.screen.clear_line(); break;
+                    }
+                    break;
+                    case sequence_type.SGR:
+                    for (const value of sequence.values) {
+                        if (value >= sgr_types.CHANGE_FG_START && value <= sgr_types.CHANGE_FG_END) {
+                            this.screen.fg = value - sgr_types.CHANGE_FG_START;
+                            this.screen.fg_rgb = undefined;
+                        } else if (value >= sgr_types.CHANGE_BG_START && value <= sgr_types.CHANGE_BG_END) {
+                            this.screen.bg = value - sgr_types.CHANGE_BG_START;
+                            this.screen.bg_rgb = undefined;
+                        } else {
+                            switch (value) {
+                                case sgr_types.RESET_ATTRIBUTES: this.screen.reset_attributes(); break;
+                                case sgr_types.BOLD_ON: this.screen.bold = true; this.screen.fg_rgb = undefined; break;
+                                case sgr_types.BLINK_ON: this.screen.blink = true; break;
+                                case sgr_types.INVERSE_ON: this.screen.inverse = true; break;
+                                case sgr_types.BOLD_OFF:
+                                case sgr_types.BLINK_OFF_ALT:
+                                this.screen.bold = false;
+                                break;
+                                case sgr_types.BLINK_OFF: this.screen.blink = false; break;
+                                case sgr_types.INVERSE_OFF: this.screen.inverse = false; break;
+                            }
+                        }
+                    }
+                    break;
+                    case sequence_type.SAVE_POS: this.screen.save_pos(); break;
+                    case sequence_type.TRUE_COLOR:
+                    if (sequence.values.length >= 4) {
+                        switch (sequence.values[0]) {
+                            case true_color_type.BACKGROUND: this.screen.bg_rgb = {r: sequence.values[1], g: sequence.values[2], b: sequence.values[3]}; break;
+                            case true_color_type.FOREGROUND: this.screen.fg_rgb = {r: sequence.values[1], g: sequence.values[2], b: sequence.values[3]}; break;
+                        }
+                    }
+                    break;
+                    case sequence_type.RESTORE_POS: this.screen.restore_pos(); break;
+                    case sequence_type.UNKNOWN: break;
+                }
+            }
+        }
+
+        this.finalize_frame();
+        this._current = 0;
+
+        // might have empty screens if both ERASE_DISPLAY and MOVE/MOVE_ALT are used
+        //TODO: remove this._screen and this._data from same index IF _data == undefined or length == 0
+        let k = this._datas.findIndex( a => a == undefined || a.length == 0 );
+        while ( k >= 0 )
+        {
+          this._datas.splice(k, 1);
+          this._screens.splice(k, 1);
+          this._current--;
+          k = this._datas.findIndex( a => a == undefined || a.length == 0 );
+        }
+
+        // for some reason columns and/or rows are undefined. assume all screen have same size
+        const colScreen = this._screens.find( (a) => {
+          return a.columns !== undefined;
+        });
+        const heightScreen = this._screens.find( (a) => {
+          return a.rows !== undefined && a.rows !== NaN;
+        });
+        const columns = colScreen ? colScreen.columns : 80;
+        const rows = heightScreen ? heightScreen.rows : 25;
+        this._screens.forEach( (a) => {
+          a.rows = rows;
+          a.columns = columns;
+         } );
+
     }
 }
 
@@ -436,7 +535,8 @@ function bin_to_ansi_colour(bin_colour) {
     }
 }
 
-function encode_as_ansi(doc, save_without_sauce, {utf8 = false} = {}) {
+function encode_as_ansi(textmodedoc, save_without_sauce, {utf8 = false} = {}) {
+    // ESC[0m - ESC[0m, reset all styles and colors
     let output = [27, 91, 48, 109];
     let bold = false;
     let blink = false;
@@ -444,89 +544,108 @@ function encode_as_ansi(doc, save_without_sauce, {utf8 = false} = {}) {
     let current_bg = 0;
     let current_bold = false;
     let current_blink = false;
-    for (let i = 0; i < doc.data.length; i++) {
-        let attribs = [];
-        let {code, fg, bg} = doc.data[i];
-        if (doc.c64_background != undefined) {
-            bg = doc.c64_background;
-        }
-        switch (code) {
-        case 10: code = 9; break;
-        case 13: code = 14; break;
-        case 26: code = 16; break;
-        case 27: code = 17; break;
-        default:
-        }
-        if (fg > 7) {
-            bold = true;
-            fg = fg - 8;
-        } else {
-            bold = false;
-        }
-        if (bg > 7) {
-            blink = true;
-            bg = bg - 8;
-        } else {
-            blink = false;
-        }
-        if ((current_bold && !bold) || (current_blink && !blink)) {
-            attribs.push([48]);
-            current_fg = 7;
-            current_bg = 0;
-            current_bold = false;
-            current_blink = false;
-        }
-        if (bold && !current_bold) {
-            attribs.push([49]);
-            current_bold = true;
-        }
-        if (blink && !current_blink) {
-            attribs.push([53]);
-            current_blink = true;
-        }
-        if (fg != current_fg) {
-            attribs.push([51, 48 + bin_to_ansi_colour(fg)]);
-            current_fg = fg;
-        }
-        if (bg != current_bg) {
-            attribs.push([52, 48 + bin_to_ansi_colour(bg)]);
-            current_bg = bg;
-        }
-        if (attribs.length) {
-            output.push(27, 91);
-            for (let i = 0; i < attribs.length; i += 1) {
-                for (const attrib of attribs[i]) {
-                    output.push(attrib);
-                }
-                if (i != attribs.length - 1) {
-                    output.push(59);
-                } else {
-                    output.push(109);
-                }
-            }
-        }
-        if (code == 32 && bg == 0) {
-            for (let j = i + 1; j < doc.data.length; j++) {
-                if (j % doc.columns == 0) {
-                    output.push(13, 10);
-                    i = j - 1;
-                    break;
-                }
-                let {code: look_ahead_code, bg: look_ahead_bg} = doc.data[j];
-                if (look_ahead_code != 32 || look_ahead_bg != 0) {
-                    while (i < j) {
-                        output.push(32);
-                        i += 1;
-                    }
-                    i = j - 1;
-                    break;
-                }
-            }
-        } else if (utf8) {
-            output.push.apply(output, cp437_to_unicode_bytes(code));
-        } else {
-            output.push(code);
-        }
+
+    //TODO: this "doc" is TextModeDoc
+    const doc = textmodedoc.doc ? textmodedoc.doc : textmodedoc;
+    // loop through all doc._datas and add ESC[H before each frame
+    doc._current = 0;
+    const frame_count = ( doc.frame_count == undefined ) ? 1 : doc.frame_count;
+    for ( let frame = 0; frame < frame_count; frame++ ) {
+      console.log("encode frame ", frame, doc.data.length);
+      if ( doc.frame_count > 0 )
+      {
+        output.push( 0 );
+        output.push( '['.charCodeAt(0) );
+        output.push( 'H'.charCodeAt(0) );
+      }
+      for (let i = 0; i < doc.data.length; i++) {
+          let attribs = [];
+          let {code, fg, bg} = doc.data[i];
+          if (doc.c64_background != undefined) {
+              bg = doc.c64_background;
+          }
+          switch (code) {
+          case 10: code = 9; break;
+          case 13: code = 14; break;
+          case 26: code = 16; break;
+          case 27: code = 17; break;
+          default:
+          }
+          if (fg > 7) {
+              bold = true;
+              fg = fg - 8;
+          } else {
+              bold = false;
+          }
+          if (bg > 7) {
+              blink = true;
+              bg = bg - 8;
+          } else {
+              blink = false;
+          }
+          if ((current_bold && !bold) || (current_blink && !blink)) {
+              attribs.push([48]);
+              current_fg = 7;
+              current_bg = 0;
+              current_bold = false;
+              current_blink = false;
+          }
+          if (bold && !current_bold) {
+              attribs.push([49]);
+              current_bold = true;
+          }
+          if (blink && !current_blink) {
+              attribs.push([53]);
+              current_blink = true;
+          }
+          if (fg != current_fg) {
+              attribs.push([51, 48 + bin_to_ansi_colour(fg)]);
+              current_fg = fg;
+          }
+          if (bg != current_bg) {
+              attribs.push([52, 48 + bin_to_ansi_colour(bg)]);
+              current_bg = bg;
+          }
+          if (attribs.length) {
+              output.push(27, 91);
+              for (let i = 0; i < attribs.length; i += 1) {
+                  for (const attrib of attribs[i]) {
+                      output.push(attrib);
+                  }
+                  if (i != attribs.length - 1) {
+                      output.push(59);
+                  } else {
+                      output.push(109);
+                  }
+              }
+          }
+          if (code == 32 && bg == 0) {
+              for (let j = i + 1; j < doc.data.length; j++) {
+                  if (j % doc.columns == 0) {
+                      output.push(13, 10);
+                      i = j - 1;
+                      break;
+                  }
+                  let {code: look_ahead_code, bg: look_ahead_bg} = doc.data[j];
+                  if (look_ahead_code != 32 || look_ahead_bg != 0) {
+                      while (i < j) {
+                          output.push(32);
+                          i += 1;
+                      }
+                      i = j - 1;
+                      break;
+                  }
+              }
+          } else if (utf8) {
+              output.push.apply(output, cp437_to_unicode_bytes(code));
+          } else {
+              output.push(code);
+          }
+      }
+      if ( doc.next_frame !== undefined )
+        doc.next_frame();
+      else
+        console.log("saving ansi - doc.next_frame undefined");
     }
     const bytes = new Uint8Array(output);
     if (utf8) return bytes;

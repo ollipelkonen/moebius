@@ -335,6 +335,10 @@ body.dark #statusbar > div > div {
     text-align: center;
     width: calc(100% - 630px);
 }
+#mid_info > div {
+	padding-left: 8px;
+	width 110px;
+}
 #right_info {
     float: right;
     width: 330px;

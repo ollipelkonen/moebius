@@ -216,6 +216,21 @@ function selection_menu_template(win, chat) {
     };
 }
 
+function animation_menu_template(win) {
+  return {
+      label: "&Animation",
+      submenu: [
+        {label: "Previous Frame", id: "previous_frame", accelerator: "Ctrl+M", click(item) {win.send("previous_frame");}},
+        {label: "Next Frame", id: "next_frame", accelerator: "Ctrl+K", click(item) {win.send("next_frame");}},
+        {type: "separator"},
+        {label: "Insert Frame Before", id: "insert_frame_before", click(item) {win.send("insert_frame_after");}},
+        {label: "Insert Frame After", id: "insert_frame_before", click(item) {win.send("insert_frame_before");}},
+        {type: "separator"},
+        {label: "Remove Frame", id: "next_frame", click(item) {win.send("remove_frame");}},
+      ]
+  };
+}
+
 function font_menu_items(win) {
     return Object.keys(font_list).map((menu_title) => {
         return {label: menu_title, submenu: Object.keys(font_list[menu_title]).map((font_name) => {
@@ -269,7 +284,7 @@ function view_menu_template(win) {
             {type: "separator"},
             {label: "Scroll Document With Cursor", id: "scroll_document_with_cursor", accelerator: "CmdorCtrl+R", click(item) {win.send("scroll_document_with_cursor", item.checked);}, type: "checkbox", checked: false},
             {type: "separator"},
-            {role: "togglefullscreen", accelerator: "CmdorCtrl+Alt+F"},
+            {role: "togglefullscreen", accelerator: "CmdorCtrl+Alt+F"}
         ]
     };
 }
@@ -317,7 +332,7 @@ function debug_menu_template(win) {
 }
 
 function create_menu_template(win, chat, debug) {
-    const menu_lists = [file_menu_template(win), edit_menu_template(win, chat), selection_menu_template(win, chat), colors_menu_template(win), view_menu_template(win), network_menu_template(win, chat)];
+    const menu_lists = [file_menu_template(win), edit_menu_template(win, chat), selection_menu_template(win, chat), colors_menu_template(win), view_menu_template(win), animation_menu_template(win), network_menu_template(win, chat)];
     if (debug) menu_lists.push(debug_menu_template(win));
     return menu_lists;
 }

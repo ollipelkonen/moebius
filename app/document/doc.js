@@ -3,6 +3,8 @@ const {on, send, send_sync} = require("../senders");
 const events = require("events");
 const chat = require("./ui/chat");
 const path = require("path");;
+const {Ansi} = require("../libtextmode/ansi");
+
 let doc, render;
 const actions =  {CONNECTED: 0, REFUSED: 1, JOIN: 2, LEAVE: 3, CURSOR: 4, SELECTION: 5, RESIZE_SELECTION: 6, OPERATION: 7, HIDE_CURSOR: 8, DRAW: 9, CHAT: 10, STATUS: 11, SAUCE: 12, ICE_COLORS: 13, USE_9PX_FONT: 14, CHANGE_FONT: 15, SET_CANVAS_SIZE: 16, PASTE_AS_SELECTION: 17, ROTATE: 18, FLIP_X: 19, FLIP_Y: 20, SET_BG: 21};
 const statuses = {ACTIVE: 0, IDLE: 1, AWAY: 2, WEB: 3};
@@ -644,7 +646,8 @@ class TextModeDoc extends events.EventEmitter {
             this.emit("ready");
             this.init = true;
         }
-    }
+        this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
+      }
 
     async new_document({columns, rows, title, author, group, date, palette, font_name, use_9px_font, ice_colors, comments, data}) {
         doc = libtextmode.new_document({columns, rows, title, author, group, date, palette, font_name, use_9px_font, ice_colors, comments, data});
@@ -722,6 +725,7 @@ class TextModeDoc extends events.EventEmitter {
     get ice_colors() {return doc.ice_colors;}
     get use_9px_font() {return doc.use_9px_font;}
     get data() {return doc.data;}
+    get doc() { return doc;}
     get c64_background() {return doc.c64_background;}
     set c64_background(value) {doc.c64_background = value;}
 
@@ -1138,9 +1142,72 @@ class TextModeDoc extends events.EventEmitter {
           send_sync("adjust_reference_image", {values: values} );
         } );
 
-        on("modify_reference_image", (event,value) => {
-          document.getElementById("reference_image").style[value.name] = value.value;
+        on("next_frame", (event,value) => {
+          console.log("next_frame. doc: ", typeof doc, doc );
+          doc.next_frame();
+          this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
+          this.start_rendering();
         });
+        on("previous_frame", (event,value) => {
+          doc.previous_frame();
+          this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
+          this.start_rendering();
+        });
+
+
+        //NOTE: if doc._datas doesn't exist, create new Ansi
+        function createTextMode()
+        {
+          const olddoc = doc;
+          doc = new Ansi( new Uint8Array() );
+          doc.colums = columns;
+          doc.rows = olddoc.rows;
+          doc.title = olddoc.title;
+          doc.author = olddoc.author;
+          doc.group = olddoc.group;
+          doc.date = olddoc.date;
+          doc.palette = olddoc.palette;
+          doc.font_name = olddoc.font_name;
+          doc.ice_colors = olddoc.ice_colors;
+          doc.use_9px_font = olddoc.use_9px_font;
+          doc.comments = olddoc.comments;
+          doc.c64_background = olddoc.c64_background;
+
+          doc._datas = [olddoc.data];
+          doc._current = 0;
+        }
+
+        const addFrame = ( index ) => {
+          const newData = Object.assign( {}, doc.data );
+          if ( doc._datas == undefined )
+            createTextMode();
+          doc._datas.splice( doc.current_frame + index, 0, newData );
+          const newScreen = Object.assign( {}, doc.screen );
+          doc._screens.splice( doc.current_frame + index, 0, newScreen );
+        }
+
+        on("insert_frame_before", (event,value) => {
+          console.log("insert_frame_before", typeof doc);
+          addFrame( 0 );
+          this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
+          this.start_rendering();
+        });
+        on("insert_frame_after", (event,value) => {
+          console.log("insert_frame_after", typeof doc);
+          addFrame( 1 );
+          this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
+          this.emit("next_frame");
+        });
+        on("remove_frame", (event,value) => {
+          if ( doc.frame_count > 0 )
+          {
+            doc._screens.splice( doc.current_frame, 1 );
+            doc._datas.splice( doc.current_frame, 1 );
+            this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
+            this.emit("previous_frame");
+          }
+        });
+
 
         chat.on("goto_row", (line_no) => this.emit("goto_row", line_no));
     }
