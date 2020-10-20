@@ -1178,12 +1178,10 @@ class TextModeDoc extends events.EventEmitter {
         }
 
         const addFrame = ( index ) => {
-          const newData = Object.assign( {}, doc.data );
           if ( doc._datas == undefined )
             createTextMode();
+          const newData = [...doc.data];
           doc._datas.splice( doc.current_frame + index, 0, newData );
-          const newScreen = Object.assign( {}, doc.screen );
-          doc._screens.splice( doc.current_frame + index, 0, newScreen );
         }
 
         on("insert_frame_before", (event,value) => {
@@ -1201,7 +1199,6 @@ class TextModeDoc extends events.EventEmitter {
         on("remove_frame", (event,value) => {
           if ( doc.frame_count > 0 )
           {
-            doc._screens.splice( doc.current_frame, 1 );
             doc._datas.splice( doc.current_frame, 1 );
             this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
             this.emit("previous_frame");
