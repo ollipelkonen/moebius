@@ -1,7 +1,11 @@
 
 # About
 
-This fork contains support for ansi animations. Most likely doesn't work well with multiple users.
+This fork contains support for ansi animations. <br>
+Loads and saves animated ansis. <br>
+See new features in animation menu. <br>
+Most likely doesn't work well with multiple users. <br>
+Awful hacks included!
 
 # Moebius
 
