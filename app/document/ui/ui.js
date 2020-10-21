@@ -166,12 +166,12 @@ class StatusBar {
       let md = $("#current_frame");
       if ( md === null )
         md = $("current_frame");
-      md.textContent =  (current+1);
+      md.textContent = Number. isInteger(current) ? (current+1) : 1;
 
       md = $("#frame_count");
       if ( md === null )
         md = $("frame_count")
-      md.textContent = total;
+      md.textContent = Number. isInteger(total) ? total : 1;
     }
 
     set_cursor_position(x, y) {
