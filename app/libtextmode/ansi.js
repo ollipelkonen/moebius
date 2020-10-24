@@ -440,6 +440,7 @@ class Ansi extends Textmode {
                     case sequence_type.RIGHT: this.screen.right(sequence.values[0]); break;
                     case sequence_type.LEFT: this.screen.left(sequence.values[0]); break;
                     case sequence_type.MOVE:
+                      //TODO: check if this is going to do empty frame without any content before this
                     this.create_new_frame();
                     this.screen.move(sequence.values[1], sequence.values[0]); break;
                     case sequence.ERASE_DISPLAY:
@@ -505,25 +506,9 @@ class Ansi extends Textmode {
         while ( k >= 0 )
         {
           this._datas.splice(k, 1);
-          //this._screens.splice(k, 1);
           this._current--;
           k = this._datas.findIndex( a => a == undefined || a.length == 0 );
         }
-
-        // for some reason columns and/or rows are undefined. assume all screen have same size
-        /*const colScreen = this._screens.find( (a) => {
-          return a.columns !== undefined;
-        });
-        const heightScreen = this._screens.find( (a) => {
-          return a.rows !== undefined && a.rows !== NaN;
-        });
-        const columns = colScreen ? colScreen.columns : 80;
-        const rows = heightScreen ? heightScreen.rows : 25;
-        this._screens.forEach( (a) => {
-          a.rows = rows;
-          a.columns = columns;
-         } );*/
-
     }
 }
 
