@@ -1,4 +1,5 @@
-const { electron, clipboard } = require("electron");
+const electron = require("electron");
+const { clipboard } = require("electron");
 const {on, send, send_sync, open_box} = require("../../senders");
 const doc = require("../doc");
 const palette = require("../palette");
