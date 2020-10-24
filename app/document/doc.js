@@ -701,7 +701,15 @@ class TextModeDoc extends events.EventEmitter {
         });
         connection.on("set_canvas_size", (columns, rows) => {
             this.undo_history.reset_undos();
-            libtextmode.resize_canvas(doc, columns, rows);
+            if ( doc.frame_count ) {
+              const currentFrame = doc.current_frame;
+              do {
+                libtextmode.resize_canvas(doc, columns, rows);
+                doc.next_frame();
+              } while ( currentFrame != doc.current_frame );
+            }
+            else
+              libtextmode.resize_canvas(doc, columns, rows);
             this.start_rendering();
         });
         connection.on("goto_row", (line_no) => this.emit("goto_row", line_no));
@@ -885,7 +893,15 @@ class TextModeDoc extends events.EventEmitter {
         } else {
             this.undo_history.reset_undos();
         }
-        libtextmode.resize_canvas(doc, columns, rows);
+        if ( doc.frame_count ) {
+          const currentFrame = doc.current_frame;
+          do {
+            libtextmode.resize_canvas(doc, columns, rows);
+            doc.next_frame();
+          } while ( currentFrame != doc.current_frame );
+        }
+        else
+          libtextmode.resize_canvas(doc, columns, rows);
         this.start_rendering();
         if (connection) connection.set_canvas_size(columns, rows);
     }
@@ -1143,7 +1159,6 @@ class TextModeDoc extends events.EventEmitter {
         } );
 
         on("next_frame", (event,value) => {
-          console.log("next_frame. doc: ", typeof doc, doc );
           doc.next_frame();
           this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
           this.start_rendering();
@@ -1153,7 +1168,6 @@ class TextModeDoc extends events.EventEmitter {
           this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
           this.start_rendering();
         });
-
 
         //NOTE: if doc._datas doesn't exist, create new Ansi
         function createTextMode()
