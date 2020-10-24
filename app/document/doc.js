@@ -1158,7 +1158,6 @@ class TextModeDoc extends events.EventEmitter {
           send_sync("adjust_reference_image", {values: values} );
         } );
         on("next_frame", (event,value) => {
-          console.log("next_frame. doc: ", typeof doc, doc );
           doc.next_frame();
           this.emit("update_frame_statusbar", {current: doc.current_frame, total: doc.frame_count});
           this.start_rendering();
