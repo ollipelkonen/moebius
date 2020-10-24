@@ -262,7 +262,10 @@ function view_menu_template(win) {
             ]},
             {type: "separator"},
             {label: "Open Reference Image\u2026", id: "open_reference_image", accelerator: "CmdorCtrl+Shift+O", click(item) {win.send("open_reference_image");}},
+            {label: "Paste Reference Image", id: "open_reference_image_clipboard", click(item) {win.send("open_reference_image_clipboard",item);}},
             {label: "Toggle Reference Image", id: "toggle_reference_image", accelerator: "Ctrl+Tab", click(item) {win.send("toggle_reference_image", item.checked);}, enabled: false, type: "checkbox", checked: true},
+            {label: "Toggle Fit", id: "toggle_reference_image_fit", click(item) {win.send("toggle_reference_image_fit", item.checked);}, enabled: false, type: "checkbox", checked: false},
+            {label: "Toggle Center", id: "toggle_reference_image_center", click(item) {win.send("toggle_reference_image_center", item.checked);}, enabled: false, type: "checkbox", checked: false},
             {label: "Clear", id: "clear_reference_image", click(item) {win.send("clear_reference_image");}, enabled: false},
             {type: "separator"},
             {label: "Scroll Document With Cursor", id: "scroll_document_with_cursor", accelerator: "CmdorCtrl+R", click(item) {win.send("scroll_document_with_cursor", item.checked);}, type: "checkbox", checked: false},
@@ -377,11 +380,15 @@ electron.ipcMain.on("disable_redo", (event, {id}) => {
 electron.ipcMain.on("enable_reference_image", (event, {id}) => {
     enable(id, "toggle_reference_image");
     check(id, "toggle_reference_image");
+    enable(id, "toggle_reference_image_fit");
+    enable(id, "toggle_reference_image_center");
     enable(id, "clear_reference_image");
 });
 
 electron.ipcMain.on("disable_clear_reference_image", (event, {id}) => {
     disable(id, "toggle_reference_image");
+    disable(id, "toggle_reference_image_fit");
+    disable(id, "toggle_reference_image_center");
     disable(id, "clear_reference_image");
 });
 

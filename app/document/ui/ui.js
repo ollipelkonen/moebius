@@ -1,4 +1,5 @@
 const electron = require("electron");
+const { clipboard } = require("electron");
 const {on, send, send_sync, open_box} = require("../../senders");
 const doc = require("../doc");
 const palette = require("../palette");
@@ -27,6 +28,17 @@ function open_reference_image() {
     }
 }
 
+function open_reference_image_clipboard(event)
+{
+  let image = clipboard && clipboard.readImage();
+  if ( image )
+  {
+    $("reference_image").style.backgroundImage = `url(${image.toDataURL()})`;
+    $("reference_image").style.opacity = 0.4;
+    send("enable_reference_image");
+  }
+}
+
 function toggle_reference_image(visible) {
     $("reference_image").style.opacity = visible ? 0.4 : 0.0;
 }
@@ -36,8 +48,23 @@ function clear_reference_image() {
     send("disable_clear_reference_image");
 }
 
+function toggle_reference_image_fit(checked)
+{
+  let ref = $("#reference_image") ?? $("reference_image");
+  ref.style.backgroundSize = checked ? "contain" : "";
+}
+
+function toggle_reference_image_center(checked)
+{
+  let ref = $("#reference_image") ?? $("reference_image");
+  ref.style.backgroundPosition = checked ? "center" : "";
+}
+
 on("open_reference_image", (event) => open_reference_image());
+on("open_reference_image_clipboard", (event, item) => open_reference_image_clipboard(event));
 on("toggle_reference_image", (event, visible) => toggle_reference_image(visible));
+on("toggle_reference_image_fit", (event, checked) => toggle_reference_image_fit(checked));
+on("toggle_reference_image_center", (event, checked) => toggle_reference_image_center(checked));
 on("clear_reference_image", (event) => clear_reference_image());
 
 function set_text(name, text) {
