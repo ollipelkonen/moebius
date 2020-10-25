@@ -181,6 +181,13 @@ electron.ipcMain.on("get_canvas_size", async (event, {id, columns, rows}) => {
     event.returnValue = true;
 });
 
+electron.ipcMain.on("adjust_reference_image", async (event, {id, values}) => {
+  docs[id].modal = await window.new_modal("app/html/adjust_reference_image.html", {width: 300, height: 260, parent: docs[id].win, frame: false, ...get_centered_xy(id, 300, 260)});
+  docs[id].modal.send("prefs", {});
+  if (darwin) add_darwin_window_menu_handler(id);
+  event.returnValue = true;
+});
+
 electron.ipcMain.on("document_changed", (event, {id}) => {
     if (!docs[id].network) {
         docs[id].edited = true;
