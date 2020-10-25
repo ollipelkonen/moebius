@@ -48,23 +48,9 @@ function clear_reference_image() {
     send("disable_clear_reference_image");
 }
 
-function toggle_reference_image_fit(checked)
-{
-  let ref = $("#reference_image") ?? $("reference_image");
-  ref.style.backgroundSize = checked ? "contain" : "";
-}
-
-function toggle_reference_image_center(checked)
-{
-  let ref = $("#reference_image") ?? $("reference_image");
-  ref.style.backgroundPosition = checked ? "center" : "";
-}
-
 on("open_reference_image", (event) => open_reference_image());
 on("open_reference_image_clipboard", (event, item) => open_reference_image_clipboard(event));
 on("toggle_reference_image", (event, visible) => toggle_reference_image(visible));
-on("toggle_reference_image_fit", (event, checked) => toggle_reference_image_fit(checked));
-on("toggle_reference_image_center", (event, checked) => toggle_reference_image_center(checked));
 on("clear_reference_image", (event) => clear_reference_image());
 
 function set_text(name, text) {

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang = "en">
+<head>
+    <meta charset = "UTF-8">
+    <title>Adjust Reference Image</title>
+    <link rel = "stylesheet" href = "../css/global.css">
+    <link rel = "stylesheet" href = "../css/requester.css">
+    <script src = "../modals/adjust_reference_image.js"></script>
+</head>
+<body class = "dark">
+    <div id = "resize_requester">
+        <form>
+            <p class = "note">Note: These are CSS attributes</p>
+            <div>
+              <label for = "reference_image_size">Size:</label>
+              <input id = "reference_image_size" type = "text" name = "reference_image_size" value = "" autocomplete = "off" autofocus>
+            </div>
+            <div>
+                <label for = "reference_image_position_x">Position X:</label>
+                <input id = "reference_image_position_x" type = "text" name = "reference_image_position_x" autocomplete = "off" value = "">
+            </div>
+            <div>
+                <label for = "reference_image_position_y">Position Y:</label>
+                <input id = "reference_image_position_y" type = "text" name = "reference_image_position_y" autocomplete = "off" value = "">
+            </div>
+            <div>
+                <label for="reference_image_centered">Center</label>
+                <input type="checkbox" name="reference_image_centered" id="reference_image_centered">
+            </div>
+            <div>
+                <label for="reference_image_repeat">Repeat</label>
+                <input type="checkbox" name="reference_image_repeat" id="reference_image_repeat">
+            </div>
+            <div>
+                <label for="reference_image_transform">Transform</label>
+                <input type="text" name="reference_image_transform" id="reference_image_transform">
+            </div>
+        </form>
+        <div id = "button_container">
+            <button id = "cancel" type = "button">Cancel</button>
+            <button id = "ok" class = "default" type = "button">Ok</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1125,6 +1125,10 @@ class TextModeDoc extends events.EventEmitter {
         on("set_canvas_size", (event, {columns, rows}) => this.resize(columns, rows));
         on("set_sauce_info", (event, {title, author, group, comments}) => this.set_sauce(title, author, group, comments));
         on("mirror_mode", (event, value) => this.mirror_mode = value);
+        on("adjust_reference_image_dialog", (event) => {
+          send_sync("adjust_reference_image");
+        } );
+
         chat.on("goto_row", (line_no) => this.emit("goto_row", line_no));
     }
 }
