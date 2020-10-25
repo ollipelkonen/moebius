@@ -418,6 +418,7 @@ class Ansi extends Textmode {
     constructor(bytes) {
         super(bytes);
         const tokens = tokenize_file({bytes: this.bytes, filesize: this.filesize});
+        console.log("constructor", tokens);
         //let screen = new Screen(this.columns);
         for (const token of tokens) {
             if (token.type == token_type.LITERAL) {
@@ -441,9 +442,11 @@ class Ansi extends Textmode {
                     case sequence_type.LEFT: this.screen.left(sequence.values[0]); break;
                     case sequence_type.MOVE:
                       //TODO: check if this is going to do empty frame without any content before this
+                      console.log("Creating new frame", sequence.type);
                     this.create_new_frame();
                     this.screen.move(sequence.values[1], sequence.values[0]); break;
                     case sequence.ERASE_DISPLAY:
+                      console.log("ERASE_DISPLAY");
                     switch (sequence.values[0]) {
                         // case erase_display_types.UNTIL_END_OF_SCREEN: this.screen.clear_until_end_of_screen(); break;
                         // case erase_display_types.FROM_START_OF_SCREEN: this.screen.clear_from_start_of_screen(); break;
@@ -540,14 +543,29 @@ function encode_as_ansi(textmodedoc, save_without_sauce, {utf8 = false} = {}) {
     const frame_count = ( doc.frame_count == undefined ) ? 1 : doc.frame_count;
     for ( let frame = 0; frame < frame_count; frame++ ) {
       console.log("encode frame ", frame, doc.data);
-      if ( doc.frame_count > 0 && frame > 0 )
+      if ( doc.frame_count > 0 /*&& frame > 0*/ )
       {
-        output.push( ascii.ESCAPE );
+        /*output.push( ascii.ESCAPE );
         output.push( '['.charCodeAt(0) );
         output.push( sequence_type.ERASE_DISPLAY );
         output.push( ascii.ESCAPE );
         output.push( '['.charCodeAt(0) );
-        output.push( sequence_type.MOVE );
+        output.push( sequence_type.MOVE );*/
+        if ( frame == 0 )
+        {
+          output.push( ascii.ESCAPE );
+          output.push( '['.charCodeAt(0) );
+          output.push( 'J'.charCodeAt(0) );
+        }
+        else
+        {
+          output.push( ascii.ESCAPE );
+          output.push( '['.charCodeAt(0) );
+          output.push( 'H'.charCodeAt(0) );
+          output.push( ascii.ESCAPE );
+          output.push( '['.charCodeAt(0) );
+          output.push( 'J'.charCodeAt(0) );
+        }
       }
       for (let i = 0; i < doc.data.length; i++) {
           let attribs = [];
