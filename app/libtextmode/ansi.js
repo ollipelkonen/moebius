@@ -418,6 +418,7 @@ class Ansi extends Textmode {
     constructor(bytes) {
         super(bytes);
         const tokens = tokenize_file({bytes: this.bytes, filesize: this.filesize});
+        console.log("constructor", tokens);
         //let screen = new Screen(this.columns);
         for (const token of tokens) {
             if (token.type == token_type.LITERAL) {
@@ -441,6 +442,7 @@ class Ansi extends Textmode {
                     case sequence_type.LEFT: this.screen.left(sequence.values[0]); break;
                     case sequence_type.MOVE:
                       //TODO: check if this is going to do empty frame without any content before this
+                      console.log("Creating new frame", sequence.type);
                     this.create_new_frame();
                     this.screen.move(sequence.values[1], sequence.values[0]); break;
                     case sequence.ERASE_DISPLAY:
