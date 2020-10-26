@@ -12,10 +12,6 @@ function ok() {
     send("close_modal");
 }
 
-function cancel() {
-    send("close_modal");
-}
-
 function prefs() {
   const img = document.getElementById("reference_image");
   let values = {
@@ -42,7 +38,6 @@ function prefs() {
 
 document.addEventListener("DOMContentLoaded", (event) => {
     document.getElementById("ok").addEventListener("click", event => ok(), true);
-    document.getElementById("cancel").addEventListener("click", event => cancel(), true);
     document.getElementById("reference_image_position_x").addEventListener("change", event => {
       document.getElementById("reference_image_centered").checked = false;
       send_parent("modify_reference_image", {name: "backgroundPositionX", value: event.target.value});
@@ -83,14 +78,11 @@ document.addEventListener("DOMContentLoaded", (event) => {
 }, true);
 
 document.addEventListener("keydown", (event) => {
-    if (event.code == "Enter") {
+    if (event.code == "Enter" || event.code == "Escape") {
         ok();
-    } else if (event.code == "Escape") {
-        cancel();
     }
 }, true);
 
 electron.ipcRenderer.on("ok", (event) => ok());
-electron.ipcRenderer.on("cancel", (event) => cancel());
 electron.ipcRenderer.on("prefs", (event, opts) => { event.returnValue=true; prefs(opts); } );
 
