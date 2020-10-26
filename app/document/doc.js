@@ -1129,6 +1129,10 @@ class TextModeDoc extends events.EventEmitter {
           send_sync("adjust_reference_image");
         } );
 
+        on("modify_reference_image", (event,value) => {
+          document.getElementById("reference_image").style[value.name] = value.value;
+        });
+
         chat.on("goto_row", (line_no) => this.emit("goto_row", line_no));
     }
 }
