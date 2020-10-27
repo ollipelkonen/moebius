@@ -12,25 +12,13 @@ function ok() {
     send("close_modal");
 }
 
-function prefs() {
-  const img = document.getElementById("reference_image");
-  let values = {
-    size: img?.style.backgroundSize,
-    repeat: img?.style.backgroundRepeat,
-    position: img?.style.backgroundPosition,
-    positionX: img?.style.backgroundPositionX,
-    positionY: img?.style.backgroundPositionY,
-    transform: img?.transform
-  };
-
+function prefs(values) {
   document.getElementById("reference_image_size").value = values.size && values.size != "" ? values.size : "100%"
   document.getElementById("reference_image_position_x").value = values.positionX && values.positionX != "" ? values.positionX : "0px";
   document.getElementById("reference_image_position_y").value = values.positionY && values.positionY != "" ? values.positionY : "0px";
   document.getElementById("reference_image_transform").value = values.transform && values.transform != "" ? values.transform : "rotate(0deg)"
-
   if ( values.position && values.position == "center" )
     document.getElementById("reference_image_centered").setAttribute("checked", true);
-
   if ( values.backgroundRepeat && values.backgroundRepeat == "repeat" )
     document.getElementById("reference_image_repeat").setAttribute("checked", true);
 }
@@ -78,7 +66,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
 }, true);
 
 document.addEventListener("keydown", (event) => {
-    if (event.code == "Enter" || event.code == "Escape") {
+    if (event.code == "Enter" || event.code == "Escape") {
         ok();
     }
 }, true);
