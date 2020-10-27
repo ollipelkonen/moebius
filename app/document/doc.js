@@ -1126,7 +1126,16 @@ class TextModeDoc extends events.EventEmitter {
         on("set_sauce_info", (event, {title, author, group, comments}) => this.set_sauce(title, author, group, comments));
         on("mirror_mode", (event, value) => this.mirror_mode = value);
         on("adjust_reference_image_dialog", (event) => {
-          send_sync("adjust_reference_image");
+          const img = document.getElementById("reference_image");
+          let values = {
+            size: img && img.style.backgroundSize != "" ? img.style.backgroundSize : "100%",
+            repeat: img?.style.backgroundRepeat,
+            position: img?.style.backgroundPosition,
+            positionX: img?.style.backgroundPositionX,
+            positionY: img?.style.backgroundPositionY,
+            transform: img?.transform
+          };
+          send_sync("adjust_reference_image", {values: values} );
         } );
 
         on("modify_reference_image", (event,value) => {
